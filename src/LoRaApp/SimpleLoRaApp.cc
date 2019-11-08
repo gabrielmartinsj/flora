@@ -49,22 +49,32 @@ void SimpleLoRaApp::initialize(int stage)
 
             if(distance <= R/6){
                 par("initialLoRaSF") = 7;
+                par("initialLoRaTP") = 2dBm;
+
             }
 
             else if (distance > R/6 && distance <= R/3){
                 par("initialLoRaSF") = 8;
+                par("initialLoRaTP") = 5dBm;
+
             }
             else if (distance > R/3 && distance <= R/2){
                 par("initialLoRaSF") = 9;
+                par("initialLoRaTP") = 8dBm;
             }
             else if (distance > R/2 && distance <= 2*R/3){
                 par("initialLoRaSF") = 10;
-            }
+                 par("initialLoRaTP") = 11dBm;
+           }
             else if (distance > 2*R/3 && distance <= 5*R/6){
                 par("initialLoRaSF") = 11;
+                par("initialLoRaTP") = 14dBm;
             }
-            else             par("initialLoRaSF") = 12;
-            
+            else{
+                par("initialLoRaSF") = 12;
+                par("initialLoRaTP") = 14dBm;
+            }
+
         }
    }
    //end
@@ -101,7 +111,7 @@ void SimpleLoRaApp::initialize(int stage)
         sfVector.setName("SF Vector");
         tpVector.setName("TP Vector");
 
-	    recordScalar("initialTP", loRaTP);
+        recordScalar("initialTP", loRaTP);
         recordScalar("initialSF", loRaSF);
     }
 }
