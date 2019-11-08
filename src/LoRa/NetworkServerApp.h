@@ -44,6 +44,8 @@ public:
     cOutVector *historyAllRSSI;
     cOutVector *receivedSeqNumber;
     cOutVector *calculatedSNRmargin;
+    int uniqueMessageReceivedGW;
+    int index;
 };
 
 class knownGW
@@ -89,6 +91,7 @@ class INET_API NetworkServerApp : public cSimpleModule, cListener
     void addPktToProcessingTable(LoRaMacFrame* pkt);
     void processScheduledPacket(cMessage* selfMsg);
     void evaluateADR(LoRaMacFrame* pkt, L3Address pickedGateway, double SNIRinGW, double RSSIinGW);
+    void recordWoADR(LoRaMacFrame* pkt, L3Address pickedGateway, double SNIRinGW, double RSSIinGW);
     void receiveSignal(cComponent *source, simsignal_t signalID, long value, cObject *details) override;
     bool evaluateADRinServer;
 

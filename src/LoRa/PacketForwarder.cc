@@ -111,10 +111,11 @@ void PacketForwarder::processLoraMACPacket(cPacket *pk)
 
 }
 
-void PacketForwarder::sendPacket()
-{
+void PacketForwarder::sendPacket(cPacket *pk)
+{//GGMJ: eu tirei isto do comentario, depois posso colocar de volta, tem q ver
+// tbm adicionei o cPacket *pk no argumento
 
-    /*LoRaAppPacket *mgmtCommand = new LoRaAppPacket("mgmtCommand");
+    LoRaAppPacket *mgmtCommand = new LoRaAppPacket("mgmtCommand");
     mgmtCommand->setMsgType(TXCONFIG);
     LoRaOptions newOptions;
     newOptions.setLoRaTP(uniform(0.1, 1));
@@ -122,12 +123,12 @@ void PacketForwarder::sendPacket()
 
     LoRaMacFrame *response = new LoRaMacFrame("mgmtCommand");
     response->encapsulate(mgmtCommand);
-    response->setLoRaTP(pk->getLoRaTP());
-    response->setLoRaCF(pk->getLoRaCF());
-    response->setLoRaSF(pk->getLoRaSF());
-    response->setLoRaBW(pk->getLoRaBW());
-    response->setReceiverAddress(pk->getTransmitterAddress());
-    send(response, "lowerLayerOut");*/
+    response->setLoRaTP(check_and_cast<LoRaMacFrame *>(pk)->getLoRaTP());
+    response->setLoRaCF(check_and_cast<LoRaMacFrame *>(pk)->getLoRaCF());
+    response->setLoRaSF(check_and_cast<LoRaMacFrame *>(pk)->getLoRaSF());
+    response->setLoRaBW(check_and_cast<LoRaMacFrame *>(pk)->getLoRaBW());
+    response->setReceiverAddress(check_and_cast<LoRaMacFrame *>(pk)->getTransmitterAddress());
+    send(response, "lowerLayerOut");
 
 }
 

@@ -55,6 +55,7 @@ private:
 
     bool iAmGateway;
     bool alohaChannelModel;
+    int alohaChannelType;
 
     W energyDetection;
     simsignal_t LoRaReceptionCollision;

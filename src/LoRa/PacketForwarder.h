@@ -25,6 +25,8 @@
 #include "LoRaMacFrame_m.h"
 #include "inet/applications/base/ApplicationBase.h"
 #include "inet/transportlayer/contract/udp/UDPSocket.h"
+#include "LoRaApp/LoRaAppPacket_m.h" //GGMJ: eu coloquei isso
+
 
 namespace inet {
 
@@ -43,7 +45,7 @@ class INET_API PacketForwarder : public cSimpleModule, public cListener
     virtual void finish() override;
     void processLoraMACPacket(cPacket *pk);
     void startUDP();
-    void sendPacket();
+    void sendPacket(cPacket *pk);
     void setSocketOptions();
     virtual int numInitStages() const override { return NUM_INIT_STAGES; }
     void receiveSignal(cComponent *source, simsignal_t signalID, long value, cObject *details) override;

@@ -276,19 +276,19 @@ void LoRaMac::handleWithFsm(cMessage *msg)
         }
         FSMA_State(RECEIVING_2)
         {
-            FSMA_Event_Transition(Receive2-Unicast-Not-For,
+            FSMA_Event_Transition(Receive-Unicast-Not-For,
                                   isLowerMessage(msg) && !isForUs(frame),
                                   LISTENING_2,
                 delete frame;
             );
-            FSMA_Event_Transition(Receive2-Unicast,
+            FSMA_Event_Transition(Receive-Unicast,
                                   isLowerMessage(msg) && isForUs(frame),
                                   IDLE,
                 sendUp(decapsulate(check_and_cast<LoRaMacFrame *>(frame)));
                 numReceived++;
                 cancelEvent(endListening_2);
             );
-            FSMA_Event_Transition(Receive2-BelowSensitivity,
+            FSMA_Event_Transition(Receive-BelowSensitivity,
                                   msg == droppedPacket,
                                   LISTENING_2,
             );

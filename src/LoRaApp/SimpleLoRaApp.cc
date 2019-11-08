@@ -32,7 +32,42 @@ void SimpleLoRaApp::initialize(int stage)
            mobility->par("initialX").setDoubleValue(coordsValues.first);
            mobility->par("initialY").setDoubleValue(coordsValues.second);
         }
-    }
+
+    // GGMJ: following 8372906 deployment
+       if (strcmp(host->par("deploymentType").stringValue(), "circleSFgrow")==0) {
+           coordsValues = generateUniformCircleCoordinates(host->par("maxGatewayDistance").doubleValue(), host->par("gatewayX").doubleValue(), host->par("gatewayY").doubleValue());
+           StationaryMobility *mobility = check_and_cast<StationaryMobility *>(host->getSubmodule("mobility"));
+           mobility->par("initialX").setDoubleValue(coordsValues.first);
+           mobility->par("initialY").setDoubleValue(coordsValues.second);
+          
+            float GX = host->par("gatewayX").doubleValue();
+            float GY = host->par("gatewayY").doubleValue();
+            float R = host->par("maxGatewayDistance").doubleValue();
+
+            float distance = sqrt(pow(GX - mobility->par("initialX").doubleValue(), 2) + pow(GY - mobility->par("initialY").doubleValue(), 2));
+
+
+            if(distance <= R/6){
+                par("initialLoRaSF") = 7;
+            }
+
+            else if (distance > R/6 && distance <= R/3){
+                par("initialLoRaSF") = 8;
+            }
+            else if (distance > R/3 && distance <= R/2){
+                par("initialLoRaSF") = 9;
+            }
+            else if (distance > R/2 && distance <= 2*R/3){
+                par("initialLoRaSF") = 10;
+            }
+            else if (distance > 2*R/3 && distance <= 5*R/6){
+                par("initialLoRaSF") = 11;
+            }
+            else             par("initialLoRaSF") = 12;
+            
+        }
+   }
+   //end
     else if (stage == INITSTAGE_APPLICATION_LAYER) {
         bool isOperational;
         NodeStatus *nodeStatus = dynamic_cast<NodeStatus *>(findContainingNode(this)->getSubmodule("status"));
@@ -65,6 +100,9 @@ void SimpleLoRaApp::initialize(int stage)
         evaluateADRinNode = par("evaluateADRinNode");
         sfVector.setName("SF Vector");
         tpVector.setName("TP Vector");
+
+	    recordScalar("initialTP", loRaTP);
+        recordScalar("initialSF", loRaSF);
     }
 }
 
@@ -195,15 +233,18 @@ void SimpleLoRaApp::sendJoinRequest()
         if(ADR_ACK_CNT >= ADR_ACK_LIMIT + ADR_ACK_DELAY)
         {
             ADR_ACK_CNT = 0;
-            increaseSFIfPossible();
+            increaseTPOrSFIfPossible();
         }
     }
     emit(LoRa_AppPacketSent, loRaSF);
 }
 
-void SimpleLoRaApp::increaseSFIfPossible()
+void SimpleLoRaApp::increaseTPOrSFIfPossible()
 {
-    if(loRaSF < 12) loRaSF++;
+    if(loRaTP != 14){
+        loRaTP = 14;
+    }
+    else if(loRaSF < 12) loRaSF++;
 }
-
-} //end namespace inet
+}
+ //end namespace inet

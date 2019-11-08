@@ -32,6 +32,7 @@ module LoRaReceiver like IReceiver
         double carrierFrequency @unit(Hz); // center frequency of the band where this receiver listens on the medium
         double bandwidth @unit(Hz);        // bandwidth of the band where this receiver listens on the medium
         bool alohaChannelModel = default(false);
+		int alohaChannelType = default(0);
         string errorModelType = default("");             // NED type of the error model
         @class(inet::physicallayer::LoRaReceiver);
         @display("i=block/wrx");

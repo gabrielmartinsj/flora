@@ -89,11 +89,18 @@ void NetworkServerApp::finish()
     recordScalar("LoRa_NS_DER", double(counterUniqueReceivedPackets)/counterOfSentPacketsFromNodes);
     for(uint i=0;i<knownNodes.size();i++)
     {
+        knownNodes[i].uniqueMessageReceivedGW = knownNodes[i].historyAllSNIR->getValuesStored();
         delete knownNodes[i].historyAllSNIR;
         delete knownNodes[i].historyAllRSSI;
         delete knownNodes[i].receivedSeqNumber;
         delete knownNodes[i].calculatedSNRmargin;
-        recordScalar("Send ADR for node", knownNodes[i].numberOfSentADRPackets);
+        recordScalar("Send ADR for node", knownNodes[i].numberOfSentADRPackets); //GGMJ: VOLTAR AQUI
+ //    GGMJ: This records the number of unique received messages from each node, this way we can know the DER.
+        std::string y = "packet UniqueRcvdFromNode" + std::to_string(knownNodes[i].index - 1);
+        char cstr[y.size() + 1];
+        strcpy(cstr, y.c_str());
+        recordScalar(cstr, knownNodes[i].uniqueMessageReceivedGW);
+
     }
     for (std::map<int,int>::iterator it=numReceivedPerNode.begin(); it != numReceivedPerNode.end(); ++it)
     {
@@ -101,6 +108,13 @@ void NetworkServerApp::finish()
         recordScalar(stringScalar.c_str(), it->second);
     }
 
+/*    int totalReceivedUniquePackets = 0;
+    int counterOfUniqueSentPacketsFromNodes = 0;
+    for(uint i = 0; i<=5; i++){
+        totalReceivedUniquePackets = totalReceivedUniquePackets + counterUniqueReceivedPacketsPerSF[i];
+        counterOfUniqueSentPacketsFromNodes = counterOfSentPacketsFromNodes + counterOfSentPacketsFromNodesPerSF[i];
+    }
+*/
     receivedRSSI.recordAs("receivedRSSI");
     recordScalar("totalReceivedPackets", totalReceivedPackets);
     for(uint i=0;i<receivedPackets.size();i++)
@@ -113,6 +127,11 @@ void NetworkServerApp::finish()
     recordScalar("counterUniqueReceivedPacketsPerSF SF10", counterUniqueReceivedPacketsPerSF[3]);
     recordScalar("counterUniqueReceivedPacketsPerSF SF11", counterUniqueReceivedPacketsPerSF[4]);
     recordScalar("counterUniqueReceivedPacketsPerSF SF12", counterUniqueReceivedPacketsPerSF[5]);
+    
+
+
+  //  recordScalar("DER from all gateways", double(totalReceivedUniquePackets/counterOfUniqueSentPacketsFromNodes));
+
     if (counterOfSentPacketsFromNodesPerSF[0] > 0)
         recordScalar("DER SF7", double(counterUniqueReceivedPacketsPerSF[0]) / counterOfSentPacketsFromNodesPerSF[0]);
     else
@@ -179,12 +198,20 @@ void NetworkServerApp::updateKnownNodes(LoRaMacFrame* pkt)
         newNode.framesFromLastADRCommand = 0;
         newNode.numberOfSentADRPackets = 0;
         newNode.historyAllSNIR = new cOutVector;
-        newNode.historyAllSNIR->setName("Vector of SNIR per node");
+        newNode.uniqueMessageReceivedGW = 0;
+
+        newNode.index = pkt->getTransmitterAddress().getInt();
+
+         std::string SNIR_per_node_name = "Vector of SNIR per node"; //+ std::to_string((newNode.index - 1));
+        newNode.historyAllSNIR->setName(SNIR_per_node_name.c_str());
         //newNode.historyAllSNIR->record(pkt->getSNIR());
         newNode.historyAllSNIR->record(math::fraction2dB(pkt->getSNIR()));
+        
         newNode.historyAllRSSI = new cOutVector;
-        newNode.historyAllRSSI->setName("Vector of RSSI per node");
+        std::string RSSI_per_node_name = "Vector of RSSI per node";
+        newNode.historyAllRSSI->setName(RSSI_per_node_name.c_str()); //olhar ndeIndex
         newNode.historyAllRSSI->record(pkt->getRSSI());
+
         newNode.receivedSeqNumber = new cOutVector;
         newNode.receivedSeqNumber->setName("Received Sequence number");
         newNode.calculatedSNRmargin = new cOutVector;
@@ -218,7 +245,7 @@ void NetworkServerApp::addPktToProcessingTable(LoRaMacFrame* pkt)
     }
 }
 
-void NetworkServerApp::processScheduledPacket(cMessage* selfMsg)
+void NetworkServerApp::processScheduledPacket(cMessage* selfMsg) //GGMJ: OLHAR
 {
     LoRaMacFrame *frame = static_cast<LoRaMacFrame *>(selfMsg->getContextPointer());
     if (simTime() >= getSimulation()->getWarmupPeriod())
@@ -264,12 +291,35 @@ void NetworkServerApp::processScheduledPacket(cMessage* selfMsg)
     {
         evaluateADR(frame, pickedGateway, SNIRinGW, RSSIinGW);
     }
+    else if(!evaluateADRinServer)
+    {
+        recordWoADR(frame, pickedGateway, SNIRinGW, RSSIinGW);
+
+    }
     delete receivedPackets[packetNumber].rcvdPacket;
     delete selfMsg;
     receivedPackets.erase(receivedPackets.begin()+packetNumber);
 }
 
-void NetworkServerApp::evaluateADR(LoRaMacFrame* pkt, L3Address pickedGateway, double SNIRinGW, double RSSIinGW)
+
+/*
+GGMJ: This records the SNR and RSSI in each node. In the early version this was only possible
+if ADR at the server was set
+*/
+void NetworkServerApp::recordWoADR(LoRaMacFrame* pkt, L3Address pickedGateway, double SNIRinGW, double RSSIinGW)
+{
+    for(uint i=0;i<knownNodes.size();i++)
+    {
+        if(knownNodes[i].srcAddr == pkt->getTransmitterAddress())
+        {
+            knownNodes[i].historyAllSNIR->record(SNIRinGW);
+            knownNodes[i].receivedSeqNumber->record(pkt->getSequenceNumber());
+    //        knownNodes[i].uniqueMessageReceivedGW++;
+        }
+    }
+}
+
+void NetworkServerApp::evaluateADR(LoRaMacFrame* pkt, L3Address pickedGateway, double SNIRinGW, double RSSIinGW) //TO READ
 {
     bool sendADR = false;
     bool sendADRAckRep = false;
@@ -286,11 +336,13 @@ void NetworkServerApp::evaluateADR(LoRaMacFrame* pkt, L3Address pickedGateway, d
     {
         if(knownNodes[i].srcAddr == pkt->getTransmitterAddress())
         {
-            knownNodes[i].adrListSNIR.push_back(SNIRinGW);
+            knownNodes[i].adrListSNIR.push_back(SNIRinGW); //GGMJ: CHECAR
             knownNodes[i].historyAllSNIR->record(SNIRinGW);
             knownNodes[i].historyAllRSSI->record(RSSIinGW);
             knownNodes[i].receivedSeqNumber->record(pkt->getSequenceNumber());
-            if(knownNodes[i].adrListSNIR.size() == 20) knownNodes[i].adrListSNIR.pop_front();
+       //     knownNodes[i].uniqueMessageReceivedGW = knownNodes[i].historyAllRSSI->getValuesStored();
+
+            if(knownNodes[i].adrListSNIR.size() == 21) knownNodes[i].adrListSNIR.pop_front(); //GGMJ: antes quando dava o pop_front ficava com 19 elementos
             knownNodes[i].framesFromLastADRCommand++;
 
             if(knownNodes[i].framesFromLastADRCommand == 20)
@@ -302,7 +354,7 @@ void NetworkServerApp::evaluateADR(LoRaMacFrame* pkt, L3Address pickedGateway, d
                 {
                     SNRm = *max_element(knownNodes[i].adrListSNIR.begin(), knownNodes[i].adrListSNIR.end());
                 }
-                if(adrMethod == "avg")
+                if(adrMethod == "avg") //GGMJ: aqui definem o ADR+, se seguir a sugestão do prof richard, mudar nesta func
                 {
                     double totalSNR = 0;
                     int numberOfFields = 0;
@@ -328,16 +380,24 @@ void NetworkServerApp::evaluateADR(LoRaMacFrame* pkt, L3Address pickedGateway, d
         {
             double SNRmargin;
             double requiredSNR;
-            if(pkt->getLoRaSF() == 7) requiredSNR = -7.5;
+            if(pkt->getLoRaSF() == 7) requiredSNR = -7.5; //DR5
             if(pkt->getLoRaSF() == 8) requiredSNR = -10;
             if(pkt->getLoRaSF() == 9) requiredSNR = -12.5;
             if(pkt->getLoRaSF() == 10) requiredSNR = -15;
             if(pkt->getLoRaSF() == 11) requiredSNR = -17.5;
-            if(pkt->getLoRaSF() == 12) requiredSNR = -20;
-
-            SNRmargin = SNRm - requiredSNR - adrDeviceMargin;
+            if(pkt->getLoRaSF() == 12) requiredSNR = -20; 
+            SNRmargin = SNRm - requiredSNR - adrDeviceMargin; //SNRmargin = SNRm – SNR(DR) - margin_db
             knownNodes[nodeIndex].calculatedSNRmargin->record(SNRmargin);
-            int Nstep = round(SNRmargin/3);
+
+            int Nstep = 0;
+
+            if(SNRmargin > 0){
+                int Nstep = floor(SNRmargin/3); //takes only the integer part
+            }
+            else if (SNRmargin < 0){
+                int Nstep = ceil(SNRmargin/3); //takes only the integer part
+            }
+
             LoRaOptions newOptions;
 
             // Increase the data rate with each step

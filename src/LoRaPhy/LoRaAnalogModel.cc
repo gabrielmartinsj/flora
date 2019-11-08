@@ -21,6 +21,8 @@
 #include "LoRaTransmission.h"
 #include "LoRaReceiver.h"
 #include "LoRa/LoRaRadio.h"
+#include "inet/physicallayer/pathloss/NakagamiFading.h"
+#include "LoRaPhy/LoRaNakagamiFading.h"
 
 namespace inet {
 
@@ -100,10 +102,11 @@ W LoRaAnalogModel::computeReceptionPower(const IRadio *receiverRadio, const ITra
     double transmitterAntennaGain = transmitterAntenna->computeGain(transmissionAntennaDirection);
     double receiverAntennaGain = receiverAntenna->computeGain(receptionAntennaDirection);
     double pathLoss = radioMedium->getPathLoss()->computePathLoss(transmission, arrival);
-    double obstacleLoss = radioMedium->getObstacleLoss() ? radioMedium->getObstacleLoss()->computeObstacleLoss(narrowbandSignalAnalogModel->getCarrierFrequency(), transmission->getStartPosition(), receptionStartPosition) : 1;
+    //double obstacleLoss = radioMedium->getObstacleLoss() ? radioMedium->getObstacleLoss()->computeObstacleLoss(narrowbandSignalAnalogModel->getCarrierFrequency(), transmission->getStartPosition(), receptionStartPosition) : 1;
     W transmissionPower = scalarSignalAnalogModel->getPower();
-    return transmissionPower * std::min(1.0, transmitterAntennaGain * receiverAntennaGain * pathLoss * obstacleLoss);
+    return transmissionPower * std::min(1.0, transmitterAntennaGain * receiverAntennaGain * pathLoss);
 }
+
 
 const IReception *LoRaAnalogModel::computeReception(const IRadio *receiverRadio, const ITransmission *transmission, const IArrival *arrival) const
 {
@@ -195,4 +198,3 @@ const ISNIR *LoRaAnalogModel::computeSNIR(const IReception *reception, const INo
 } // namespace physicallayer
 
 } // namespace inet
-

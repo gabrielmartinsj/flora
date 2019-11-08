@@ -27,7 +27,7 @@ simple NetworkServerApp like IUDPApp
     bool evaluateADRinServer = default(false);
 	
 	string adrMethod = default("max");
-	double adrDeviceMargin = default(15);
+	double adrDeviceMargin = default(10); //changed From 10 to 15 (LoRaWAN ADR.pdf)
 	
     gates:
     output udpOut;

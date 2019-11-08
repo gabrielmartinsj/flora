@@ -37,6 +37,7 @@ void LoRaReceiver::initialize(int stage)
             iAmGateway = true;
         } else iAmGateway = false;
         alohaChannelModel = par("alohaChannelModel");
+        alohaChannelType = par("alohaChannelType");
         LoRaReceptionCollision = registerSignal("LoRaReceptionCollision");
         numCollisions = 0;
         rcvBelowSensitivity = 0;
@@ -147,9 +148,9 @@ bool LoRaReceiver::isPacketCollided(const IReception *reception, IRadioSignal::S
         double interferenceRSSI_mw = interferenceRSSI_w.get()*1000;
         double interferenceRSSI_dBm = math::mW2dBm(interferenceRSSI_mw);
 
-        if(signalRSSI_dBm - interferenceRSSI_dBm < P_threshold)
+        if(signalRSSI_dBm - interferenceRSSI_dBm > P_threshold)
         {
-            captureEffect = true;
+            captureEffect = true; //captureEffect ocorre qnd deltaP > P_threshold?
         }
 
         double nPreamble = 8; //from the paper "Does Lora networks..."
@@ -163,20 +164,21 @@ bool LoRaReceiver::isPacketCollided(const IReception *reception, IRadioSignal::S
         }
         if (overlap && frequencyColision && spreadingFactorColision) // && captureEffect && timingCollison)
         {
-            if(alohaChannelModel == true)
+           if(alohaChannelModel == true)
             {
                 if(iAmGateway && (part == IRadioSignal::SIGNAL_PART_DATA || part == IRadioSignal::SIGNAL_PART_WHOLE)) const_cast<LoRaReceiver* >(this)->emit(LoRaReceptionCollision, true);
                 return true;
             }
             if(alohaChannelModel == false)
             {
-                if(captureEffect && timingCollison)
+                if(!captureEffect && timingCollison) 
                 {
                     if(iAmGateway && (part == IRadioSignal::SIGNAL_PART_DATA || part == IRadioSignal::SIGNAL_PART_WHOLE)) const_cast<LoRaReceiver* >(this)->emit(LoRaReceptionCollision, true);
                     return true;
                 }
             }
-
+        
+        
         }
     }
     return false;
@@ -267,6 +269,7 @@ W LoRaReceiver::getSensitivity(const LoRaReception *reception) const
         if(reception->getLoRaBW() == Hz(125000)) sensitivity = W(math::dBm2mW(-124) / 1000);
         if(reception->getLoRaBW() == Hz(250000)) sensitivity = W(math::dBm2mW(-122) / 1000);
         if(reception->getLoRaBW() == Hz(500000)) sensitivity = W(math::dBm2mW(-116) / 1000);
+    
     }
 
     if(reception->getLoRaSF() == 8)
